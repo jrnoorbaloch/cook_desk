@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>USB Print Agent</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 320px;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 420px;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+      padding: 16px 18px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .header-logo {
+      font-size: 22px;
+    }
+    .header-text h1 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .header-text p {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    /* ── Status Card ── */
+    .status-card {
+      margin: 14px 14px 0;
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 14px 16px;
+      border: 1px solid #334155;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .status-label {
+      font-size: 11px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot.green  { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+    .dot.red    { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
+    .dot.amber  { background: #f59e0b; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+
+    .status-detail {
+      margin-top: 8px;
+      font-size: 11px;
+      color: #94a3b8;
+    }
+
+    /* ── Config ── */
+    .config-section {
+      margin: 12px 14px 0;
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 12px 16px;
+      border: 1px solid #334155;
+    }
+    .config-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 10px;
+    }
+    .config-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .config-row label {
+      font-size: 11px;
+      color: #94a3b8;
+      min-width: 28px;
+    }
+    .config-row input {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      color: #f1f5f9;
+      outline: none;
+    }
+    .config-row input:focus {
+      border-color: #3b82f6;
+    }
+    .btn-save {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-save:hover { background: #2563eb; }
+
+    /* ── Actions ── */
+    .actions {
+      margin: 12px 14px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn:active { transform: scale(.97); }
+    .btn .btn-icon { font-size: 18px; }
+    .btn-primary   { background: #22c55e; color: #052e16; }
+    .btn-secondary { background: #3b82f6; color: #eff6ff; }
+    .btn-ghost     { background: #334155; color: #e2e8f0; }
+    .btn-warning   { background: #f59e0b; color: #1c1917; }
+    .btn:disabled  { opacity: .4; cursor: not-allowed; }
+
+    /* ── Printers List ── */
+    .printers-section {
+      margin: 12px 14px 0;
+      background: #1e293b;
+      border-radius: 10px;
+      padding: 12px 16px;
+      border: 1px solid #334155;
+      display: none;
+    }
+    .printers-section.visible { display: block; }
+    .printers-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 8px;
+    }
+    .printer-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid #0f172a;
+      font-size: 11px;
+    }
+    .printer-item:last-child { border-bottom: none; }
+    .printer-name { color: #cbd5e1; }
+    .printer-default {
+      background: #065f46;
+      color: #6ee7b7;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    /* ── Log ── */
+    .log-section {
+      margin: 12px 14px;
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      border: 1px solid #1e293b;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      font-size: 10px;
+      color: #475569;
+      line-height: 1.6;
+    }
+    .log-entry.success { color: #22c55e; }
+    .log-entry.error   { color: #ef4444; }
+    .log-entry.info    { color: #38bdf8; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-logo">🖨️</div>
+  <div class="header-text">
+    <h1>USB Print Agent</h1>
+    <p>Cook Desk by Pixymo Tech</p>
+  </div>
+</div>
+
+<!-- Status Card -->
+<div class="status-card">
+  <div class="status-row">
+    <span class="status-label">Agent Status</span>
+    <span class="status-badge" id="statusBadge">
+      <span class="dot amber" id="statusDot"></span>
+      <span id="statusText">Checking…</span>
+    </span>
+  </div>
+  <div class="status-detail" id="statusDetail">Connecting to agent…</div>
+</div>
+
+<!-- Config -->
+<div class="config-section">
+  <div class="config-title">Agent Connection</div>
+  <div class="config-row">
+    <label>IP</label>
+    <input type="text"   id="agentIp"   placeholder="127.0.0.1" />
+    <label>Port</label>
+    <input type="number" id="agentPort" placeholder="3535" style="max-width:68px" />
+    <button class="btn-save" id="btnSave">Save</button>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="actions">
+  <button class="btn btn-primary" id="btnTestPrint">
+    <span class="btn-icon">🖨️</span>Test Print
+  </button>
+  <button class="btn btn-secondary" id="btnRefresh">
+    <span class="btn-icon">🔄</span>Refresh
+  </button>
+  <button class="btn btn-ghost" id="btnPrinters">
+    <span class="btn-icon">📋</span>List Printers
+  </button>
+  <button class="btn btn-warning" id="btnDownload">
+    <span class="btn-icon">⬇️</span>Download Agent
+  </button>
+</div>
+
+<!-- Printers List -->
+<div class="printers-section" id="printersSection">
+  <div class="printers-title">Detected Printers</div>
+  <div id="printersList">Loading…</div>
+</div>
+
+<!-- Log -->
+<div class="log-section" id="logSection">
+  <div class="log-entry info">Extension loaded. Checking agent status…</div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

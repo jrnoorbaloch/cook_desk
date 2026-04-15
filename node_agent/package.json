@@ -1,0 +1,43 @@
+{
+  "name": "usb-print-agent",
+  "productName": "USB Print Agent",
+  "version": "1.0.0",
+  "description": "USB Print Agent for Cook Desk ERPNext — local HTTP bridge for USB/thermal printers",
+  "main": "src/tray.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:tray": "electron src/tray.js",
+    "dev": "nodemon src/index.js",
+    "build:installer": "node scripts/build-installer.js",
+    "dist": "electron-builder --win --x64 --dir"
+  },
+  "keywords": ["thermal-printer", "usb", "escpos", "erpnext", "frappe"],
+  "author": "Pixymo Tech <info@pixymotech.com>",
+  "license": "MIT",
+  "build": {
+    "appId": "com.pixymotech.usb-print-agent",
+    "productName": "USB Print Agent",
+    "copyright": "Copyright 2026 Pixymo Tech",
+    "directories": { "output": "dist" },
+    "win": {
+      "target": [{ "target": "dir", "arch": ["x64"] }],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "files": ["src/**/*", "assets/**/*", "node_modules/**/*", "package.json"],
+    "asar": true,
+    "compression": "maximum"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-printer": "^1.0.0",
+    "node-thermal-printer": "^4.4.1",
+    "electron": "^28.1.0",
+    "auto-launch": "^5.0.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "electron-builder": "^24.9.1"
+  }
+}

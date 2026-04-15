@@ -1,0 +1,121 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "USB Printer Settings",
+ "creation": "2026-04-15 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "agent_section",
+  "server_ip",
+  "port",
+  "auto_connect",
+  "column_break_1",
+  "connection_status",
+  "last_checked",
+  "section_break_actions",
+  "test_connection_button",
+  "section_break_download",
+  "download_agent_section",
+  "agent_info_html",
+  "download_agent_button"
+ ],
+ "fields": [
+  {
+   "fieldname": "agent_section",
+   "fieldtype": "Section Break",
+   "label": "USB Print Agent Configuration"
+  },
+  {
+   "default": "127.0.0.1",
+   "fieldname": "server_ip",
+   "fieldtype": "Data",
+   "label": "Agent IP Address",
+   "description": "IP address where the USB Print Agent is running (default: 127.0.0.1 for local machine)",
+   "reqd": 1
+  },
+  {
+   "default": "3535",
+   "fieldname": "port",
+   "fieldtype": "Int",
+   "label": "Agent Port",
+   "description": "Port the USB Print Agent listens on (default: 3535)",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_connect",
+   "fieldtype": "Check",
+   "label": "Auto Connect on Load"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "connection_status",
+   "fieldtype": "Data",
+   "label": "Connection Status",
+   "read_only": 1,
+   "default": "Not Checked"
+  },
+  {
+   "fieldname": "last_checked",
+   "fieldtype": "Datetime",
+   "label": "Last Checked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_actions",
+   "fieldtype": "Section Break",
+   "label": "Actions"
+  },
+  {
+   "fieldname": "test_connection_button",
+   "fieldtype": "Button",
+   "label": "Test Connection & Print"
+  },
+  {
+   "fieldname": "section_break_download",
+   "fieldtype": "Section Break",
+   "label": "Download Agent"
+  },
+  {
+   "fieldname": "agent_info_html",
+   "fieldtype": "HTML",
+   "label": "Agent Information",
+   "options": "<div class='usb-agent-info alert alert-info'>\n  <h5><b>\ud83d\udce6 USB Print Agent</b></h5>\n  <p>The USB Print Agent is a lightweight background service that runs on your Windows PC and enables direct USB printer communication.</p>\n  <ul>\n    <li>\u2705 Runs silently in the system tray</li>\n    <li>\u2705 Auto-starts with Windows</li>\n    <li>\u2705 Supports ESC/POS thermal printers</li>\n    <li>\u2705 No manual configuration needed</li>\n  </ul>\n  <p><b>Steps:</b> Download \u2192 Run installer \u2192 Agent starts automatically \u2192 Click \"Test Connection & Print\"</p>\n</div>"
+  },
+  {
+   "fieldname": "download_agent_button",
+   "fieldtype": "Button",
+   "label": "\u2b07\ufe0f Download USB Print Agent (.exe)"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "is_single": 1,
+ "links": [],
+ "modified": "2026-04-15 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "USB Printing",
+ "name": "USB Printer Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
