@@ -143,7 +143,7 @@ function _list_printers(frm) {
 // ─── Download Agent ───────────────────────────────────────────────────────────
 function _download_agent(frm) {
     const link    = document.createElement("a");
-    link.href     = "/files/usb_print_agent_setup.exe";
+    link.href     = "/assets/cook_desk/files/usb_print_agent_setup.exe";
     link.download = "usb_print_agent_setup.exe";
     link.click();
 }
@@ -152,7 +152,7 @@ function _download_agent(frm) {
 // ─── Download Chrome Extension ────────────────────────────────────────────────
 function _download_extension() {
     const link    = document.createElement("a");
-    link.href     = "/files/usb_print_agent_extension.zip";
+    link.href     = "/assets/cook_desk/files/usb_print_agent_extension.zip";
     link.download = "usb_print_agent_extension.zip";
     link.click();
 }
@@ -250,7 +250,7 @@ function _render_instructions(frm) {
             <div style="margin-top:18px">
                 <button onclick="
                     var l=document.createElement('a');
-                    l.href='/files/usb_print_agent_setup.exe';
+                    l.href='/assets/cook_desk/files/usb_print_agent_setup.exe';
                     l.download='usb_print_agent_setup.exe';
                     l.click();
                 " style="
@@ -337,7 +337,7 @@ function _render_instructions(frm) {
             <div style="margin-top:18px">
                 <button onclick="
                     var l=document.createElement('a');
-                    l.href='/files/usb_print_agent_extension.zip';
+                    l.href='/assets/cook_desk/files/usb_print_agent_extension.zip';
                     l.download='usb_print_agent_extension.zip';
                     l.click();
                 " style="

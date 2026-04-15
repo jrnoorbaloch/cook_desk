@@ -42,7 +42,7 @@ Allows direct printing to USB thermal printers connected to a Windows PC without
 cd ~/frappe-bench
 
 # Get the app
-bench get-app https://github.com/pixymotech/cook_desk.git
+bench get-app https://github.com/jrnoorbaloch/cook_desk.git
 
 # Install on your site
 bench --site your-site.com install-app cook_desk
