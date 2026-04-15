@@ -29,7 +29,7 @@ Allows direct printing to USB thermal printers connected to a Windows PC without
 
 ## Requirements
 
-- ERPNext v14 or v15
+- ERPNext v14 or v15 and v16
 - Frappe Framework v14+
 - Python 3.10+
 
