@@ -1,17 +1,22 @@
 app_name = "cook_desk"
+
+# ── Fixtures (auto-load on install/migrate) ───────────────────────────────────
+fixtures = [
+    {
+        "doctype": "Print Format",
+        "filters": [["module", "=", "Cook Desk"]]
+    },
+    {
+        "doctype": "Page",
+        "filters": [["module", "=", "Cook Desk"]]
+    }
+]
+
 app_title = "Cook Desk"
 app_publisher = "Pixymo Tech"
 app_description = "KOT SYSTEM + USB Printing"
 app_email = "info@pixymotech.com"
 app_license = "mit"
-
-# ── Fixtures ──────────────────────────────────────────────────────────────────
-fixtures = [
-    {
-        "doctype": "Print Format",
-        "filters": [["module", "=", "Cook Desk"]]
-    }
-]
 
 # ── KOT System ───────────────────────────────────────────────────────────────
 doc_events = {
@@ -25,5 +30,3 @@ doctype_js = {
     "Kitchen Printer":      "public/js/kitchen_printer.js",
     "USB Printer Settings": "usb_printing/doctype/usb_printer_settings/usb_printer_settings.js",
 }
-
-

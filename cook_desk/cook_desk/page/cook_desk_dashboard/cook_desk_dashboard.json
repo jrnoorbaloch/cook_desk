@@ -1,0 +1,18 @@
+{
+ "creation": "2026-04-17 00:00:00.000000",
+ "doctype": "Page",
+ "modified": "2026-04-17 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Cook Desk",
+ "name": "cook-desk-dashboard",
+ "owner": "Administrator",
+ "page_name": "cook-desk-dashboard",
+ "standard": "Yes",
+ "system_health_pages": 0,
+ "title": "Cook Desk Dashboard",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ]
+}
