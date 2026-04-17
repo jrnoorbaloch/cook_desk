@@ -1,0 +1,241 @@
+{%- set company = frappe.get_doc("Company", doc.company) %}
+{%- set currency = doc.currency or "PKR" %}
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 12px;
+    color: #000;
+    background: #fff;
+    width: 72mm;
+  }
+
+  .wrap {
+    width: 72mm;
+    padding: 4mm 3mm;
+  }
+
+  .c  { text-align: center; }
+  .r  { text-align: right; }
+
+  .dbl { border-top: 2px double #000; margin: 4px 0; }
+  .sng { border-top: 1px dashed #000; margin: 4px 0; }
+
+  .shop-name {
+    font-size: 16px;
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+
+  .shop-sub {
+    font-size: 10px;
+    text-align: center;
+    color: #333;
+    line-height: 1.5;
+  }
+
+  .inv-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    margin: 5px 0 2px;
+    letter-spacing: 2px;
+    text-decoration: underline;
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin: 1px 0;
+  }
+
+  .meta-row .lbl { color: #444; }
+  .meta-row .val { font-weight: 600; }
+
+  .item-header {
+    display: flex;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 0;
+    text-transform: uppercase;
+  }
+
+  .item-header .col-item { flex: 1; }
+  .item-header .col-qty  { width: 28px; text-align: center; }
+  .item-header .col-rate { width: 52px; text-align: right; }
+  .item-header .col-amt  { width: 58px; text-align: right; }
+
+  .item-row {
+    display: flex;
+    align-items: flex-start;
+    font-size: 11px;
+    padding: 3px 0;
+    border-bottom: 1px dotted #ccc;
+  }
+
+  .item-row .col-item { flex: 1; padding-right: 4px; line-height: 1.4; }
+  .item-row .col-item .iname { font-weight: 600; }
+  .item-row .col-item .idisc { font-size: 10px; color: #555; }
+  .item-row .col-qty  { width: 28px; text-align: center; padding-top: 1px; }
+  .item-row .col-rate { width: 52px; text-align: right; padding-top: 1px; }
+  .item-row .col-amt  { width: 58px; text-align: right; padding-top: 1px; font-weight: 600; }
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11.5px;
+    padding: 2px 0;
+  }
+
+  .total-row.tax  { color: #333; font-size: 11px; }
+  .total-row.disc { color: #333; font-size: 11px; }
+
+  .total-row.grand {
+    font-size: 14px;
+    font-weight: 900;
+    padding: 4px 0 2px;
+  }
+
+  .pay-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 2px 0;
+  }
+
+  .pay-row.change { font-weight: 700; font-size: 12px; }
+
+  .footer {
+    text-align: center;
+    font-size: 10.5px;
+    line-height: 1.8;
+    margin-top: 5px;
+    color: #222;
+  }
+
+  .footer .ty { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .footer .powered { font-size: 9px; color: #888; margin-top: 4px; }
+
+  @media print {
+    body { width: 72mm; }
+    .wrap { padding: 2mm; }
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="shop-name">{{ doc.company }}</div>
+  <div class="shop-sub">
+    {%- if company.address %}{{ company.address }}<br>{%- endif %}
+    {%- if company.phone_no %}Tel: {{ company.phone_no }}<br>{%- endif %}
+    {%- if company.email %}{{ company.email }}{%- endif %}
+  </div>
+
+  <div class="dbl"></div>
+  <div class="inv-title">POS INVOICE</div>
+
+  <div class="meta-row"><span class="lbl">Invoice#</span><span class="val">{{ doc.name }}</span></div>
+  <div class="meta-row"><span class="lbl">Date</span><span class="val">{{ frappe.format(doc.posting_date, {"fieldtype":"Date"}) }}</span></div>
+  <div class="meta-row"><span class="lbl">Time</span><span class="val">{{ doc.posting_time or "" }}</span></div>
+  <div class="meta-row"><span class="lbl">Customer</span><span class="val">{{ doc.customer or "Walk-in" }}</span></div>
+  <div class="meta-row"><span class="lbl">Cashier</span><span class="val">{{ doc.owner }}</span></div>
+
+  <div class="sng"></div>
+
+  <div class="item-header">
+    <div class="col-item">Item</div>
+    <div class="col-qty">Qty</div>
+    <div class="col-rate">Rate</div>
+    <div class="col-amt">Amt</div>
+  </div>
+
+  <div class="sng"></div>
+
+  {%- for item in doc.items %}
+  <div class="item-row">
+    <div class="col-item">
+      <div class="iname">{{ item.item_name }}</div>
+      {%- if item.discount_percentage %}
+      <div class="idisc">Disc: {{ "{:.0f}".format(item.discount_percentage) }}%</div>
+      {%- endif %}
+    </div>
+    <div class="col-qty">{{ item.qty | int }}</div>
+    <div class="col-rate">{{ "{:,.0f}".format(item.rate or 0) }}</div>
+    <div class="col-amt">{{ "{:,.0f}".format(item.amount or 0) }}</div>
+  </div>
+  {%- endfor %}
+
+  <div class="sng"></div>
+
+  <div class="total-row">
+    <span>Subtotal</span>
+    <span>{{ currency }} {{ "{:,.0f}".format(doc.total or 0) }}</span>
+  </div>
+
+  {%- if doc.discount_amount and doc.discount_amount != 0 %}
+  <div class="total-row disc">
+    <span>Discount</span>
+    <span>- {{ currency }} {{ "{:,.0f}".format(doc.discount_amount) }}</span>
+  </div>
+  {%- endif %}
+
+  {%- for tax in doc.taxes %}
+  {%- if tax.tax_amount %}
+  <div class="total-row tax">
+    <span>{{ tax.description or tax.account_head }} ({{ tax.rate }}%)</span>
+    <span>{{ currency }} {{ "{:,.0f}".format(tax.tax_amount) }}</span>
+  </div>
+  {%- endif %}
+  {%- endfor %}
+
+  {%- if doc.loyalty_amount and doc.loyalty_amount != 0 %}
+  <div class="total-row disc">
+    <span>Loyalty</span>
+    <span>- {{ currency }} {{ "{:,.0f}".format(doc.loyalty_amount) }}</span>
+  </div>
+  {%- endif %}
+
+  <div class="dbl"></div>
+
+  <div class="total-row grand">
+    <span>TOTAL</span>
+    <span>{{ currency }} {{ "{:,.0f}".format(doc.grand_total or 0) }}</span>
+  </div>
+
+  <div class="sng"></div>
+
+  {%- if doc.payments %}
+  {%- for pay in doc.payments %}
+  {%- if pay.amount %}
+  <div class="pay-row">
+    <span>{{ pay.mode_of_payment }}</span>
+    <span>{{ currency }} {{ "{:,.0f}".format(pay.amount) }}</span>
+  </div>
+  {%- endif %}
+  {%- endfor %}
+
+  {%- if doc.change_amount and doc.change_amount > 0 %}
+  <div class="pay-row change">
+    <span>Change</span>
+    <span>{{ currency }} {{ "{:,.0f}".format(doc.change_amount) }}</span>
+  </div>
+  {%- endif %}
+  {%- endif %}
+
+  <div class="dbl"></div>
+
+  <div class="footer">
+    <div class="ty">** Thank You! **</div>
+    <div>Please Visit Again</div>
+    {%- if company.phone_no %}
+    <div>{{ company.phone_no }}</div>
+    {%- endif %}
+    <div class="powered">Cook Desk by Pixymo Tech</div>
+  </div>
+
+</div>

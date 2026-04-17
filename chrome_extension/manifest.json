@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Cook Desk — USB Print Agent",
+  "version": "1.0.0",
+  "description": "Connect Cook Desk ERPNext to your local USB thermal printer via the USB Print Agent.",
+  "permissions": [
+    "storage",
+    "notifications",
+    "activeTab",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:*/*",
+    "http://localhost:*/*",
+    "http://*/*"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16":  "icons/icon16.png",
+      "48":  "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "USB Print Agent"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

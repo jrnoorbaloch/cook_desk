@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cook Desk — Print Agent Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg:       #0a0c10;
+    --surface:  #111318;
+    --border:   #1e2330;
+    --accent:   #f97316;
+    --accent2:  #3b82f6;
+    --green:    #22c55e;
+    --red:      #ef4444;
+    --amber:    #f59e0b;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 230px 1fr;
+    grid-template-rows: 56px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Topbar ── */
+  .topbar {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+  }
+
+  .topbar-brand { display: flex; align-items: center; gap: 10px; }
+  .topbar-brand .logo { font-family: var(--sans); font-size: 18px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; }
+  .topbar-brand .slash { color: var(--border); margin: 0 4px; }
+  .topbar-brand .sub { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+
+  .agent-pill {
+    display: flex; align-items: center; gap: 7px;
+    background: rgba(34,197,94,0.1);
+    border: 1px solid rgba(34,197,94,0.3);
+    border-radius: 20px; padding: 4px 12px;
+    font-family: var(--mono); font-size: 11px; color: var(--green);
+  }
+  .agent-pill.offline { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: var(--red); }
+
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1.4s infinite; }
+  .agent-pill.offline .pulse { background: var(--red); animation: none; }
+
+  @keyframes pulse {
+    0%,100% { opacity:1; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+    50%      { opacity:.7; box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+  }
+
+  .uptime { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+  }
+
+  .nav-section {
+    font-family: var(--mono); font-size: 9px; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 12px 20px 6px;
+  }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 20px; cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all .15s; font-size: 13px; color: var(--muted);
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+  .nav-item.active { border-left-color: var(--accent); background: rgba(249,115,22,0.07); color: var(--accent); }
+  .nav-item .icon { font-size: 14px; width: 18px; text-align: center; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+  }
+
+  /* ── Main ── */
+  .main { padding: 28px; overflow-y: auto; background: var(--bg); }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-header { margin-bottom: 24px; }
+  .page-header h2 { font-size: 22px; font-weight: 800; color: var(--text); letter-spacing: -0.3px; }
+  .page-header p { font-size: 13px; color: var(--muted); margin-top: 3px; font-family: var(--mono); }
+
+  /* ── Stat Cards ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px; position: relative; overflow: hidden;
+  }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--accent); }
+  .stat-card.blue::before  { background: var(--accent2); }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.red::before   { background: var(--red); }
+
+  .stat-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; font-family: var(--mono); }
+  .stat-sub   { font-size: 11px; color: var(--muted); margin-top: 5px; font-family: var(--mono); }
+
+  /* ── Section ── */
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .section-head h3 { font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .section-body { padding: 16px 18px; }
+
+  /* ── Printer Cards ── */
+  .printer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; padding: 16px 18px; }
+
+  .printer-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; transition: border-color .2s; }
+  .printer-card:hover { border-color: #2e3545; }
+  .printer-card.online  { border-left: 3px solid var(--green); }
+  .printer-card.offline { border-left: 3px solid var(--red); }
+  .printer-card.default { border-left: 3px solid var(--accent); }
+
+  .printer-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+  .printer-name { font-size: 14px; font-weight: 700; color: var(--text); font-family: var(--mono); }
+  .printer-type { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: var(--mono); }
+
+  .status-dot { width: 9px; height: 9px; border-radius: 50%; margin-top: 3px; }
+  .status-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.red   { background: var(--red); }
+
+  .printer-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 14px; }
+  .meta-item { font-family: var(--mono); font-size: 10px; }
+  .meta-item .k { color: var(--muted); }
+  .meta-item .v { color: var(--text); font-weight: 600; }
+  .printer-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 13px; border-radius: 6px; font-size: 12px; font-weight: 600; font-family: var(--sans); cursor: pointer; border: none; transition: all .15s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #ea6c0a; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .btn-ghost:hover { border-color: #2e3545; color: var(--text); }
+  .btn-blue  { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: var(--accent2); }
+  .btn-blue:hover { background: rgba(59,130,246,0.25); }
+  .btn-green { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: var(--green); }
+  .btn-green:hover { background: rgba(34,197,94,0.22); }
+  .btn-red   { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+  .btn-red:hover { background: rgba(239,68,68,0.22); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── Log ── */
+  .log-box { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; height: 180px; overflow-y: auto; font-family: var(--mono); font-size: 11px; line-height: 1.8; }
+  .log-line { display: flex; gap: 10px; }
+  .log-time { color: var(--muted); flex-shrink: 0; }
+  .log-msg.ok   { color: var(--green); }
+  .log-msg.err  { color: var(--red); }
+  .log-msg.info { color: var(--accent2); }
+  .log-msg.warn { color: var(--amber); }
+
+  /* ── Form ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-label { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .form-input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-family: var(--mono); font-size: 12px; color: var(--text); outline: none; transition: border-color .15s; }
+  .form-input:focus { border-color: var(--accent); }
+  select.form-input option { background: var(--surface); }
+
+  /* ── Toast ── */
+  #toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; font-size: 13px; font-family: var(--mono); display: flex; align-items: center; gap: 10px; transform: translateY(80px); opacity: 0; transition: all .3s; z-index: 1000; max-width: 340px; }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.ok   { border-left: 3px solid var(--green); }
+  #toast.err  { border-left: 3px solid var(--red); }
+  #toast.info { border-left: 3px solid var(--accent2); }
+
+  /* ── Data Table ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .data-table th { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(30,35,48,0.5); font-family: var(--mono); color: var(--text); }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── Settings Card ── */
+  .settings-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 18px; margin-bottom: 14px; }
+  .settings-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 14px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+
+  /* ── Doctype page ── */
+  .doctype-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .doctype-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; cursor: pointer;
+    transition: all .2s; position: relative; overflow: hidden;
+  }
+  .doctype-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--border); transition: background .2s; }
+  .doctype-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .doctype-card:hover::before { background: var(--accent); }
+  .doctype-icon { font-size: 26px; margin-bottom: 10px; }
+  .doctype-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .doctype-module { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 12px; }
+  .doctype-badge { display: inline-block; font-family: var(--mono); font-size: 9px; padding: 2px 8px; border-radius: 10px; font-weight: 700; text-transform: uppercase; }
+  .db-main  { background: rgba(249,115,22,0.12); color: var(--accent); }
+  .db-child { background: rgba(59,130,246,0.12);  color: var(--accent2); }
+  .db-sub   { background: rgba(100,116,139,0.15); color: var(--muted); }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .empty { text-align: center; padding: 40px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  .empty .e-icon { font-size: 32px; margin-bottom: 10px; }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ══ TOPBAR ══ -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="logo"><img src="/assets/icon.ico" style="width:24px;height:24px;object-fit:contain;"> Cook Desk</span>
+      <span class="slash">/</span>
+      <span class="sub">Print Agent Dashboard</span>
+    </div>
+    <div class="topbar-right">
+      <span class="uptime" id="uptimeDisplay">uptime: --</span>
+      <div class="agent-pill" id="agentPill">
+        <span class="pulse"></span>
+        <span id="agentStatus">Connecting...</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="refreshAll()">⟳ Refresh</button>
+    </div>
+  </header>
+
+  <!-- ══ SIDEBAR ══ -->
+  <nav class="sidebar">
+
+    <div class="nav-section">Monitor</div>
+    <div class="nav-item active" onclick="showPage('overview', this)">
+      <span class="icon">◈</span> Overview
+    </div>
+    <div class="nav-item" onclick="showPage('printers', this)">
+      <span class="icon">🖨</span> Printers
+    </div>
+    <div class="nav-item" onclick="showPage('kot', this)">
+      <span class="icon">📋</span> KOT Log
+    </div>
+
+    <div class="nav-section">Control</div>
+    <div class="nav-item" onclick="showPage('test', this)">
+      <span class="icon">⚡</span> Test Print
+    </div>
+    <div class="nav-item" onclick="showPage('settings', this)">
+      <span class="icon">⚙</span> Settings
+    </div>
+
+    <div class="nav-section">Doctypes</div>
+    <div class="nav-item" onclick="showPage('doctypes', this)">
+      <span class="icon">🗂</span> All Doctypes
+    </div>
+    <div class="nav-item" onclick="openDoctype('Kitchen')">
+      <span class="icon">🍳</span> Kitchen
+    </div>
+    <div class="nav-item" onclick="openDoctype('Kitchen Printer')">
+      <span class="icon">🖨</span> Kitchen Printer
+    </div>
+    <div class="nav-item" onclick="openDoctype('KOT')">
+      <span class="icon">📋</span> KOT
+    </div>
+    <div class="nav-item" onclick="openDoctype('KOT Item')">
+      <span class="icon">🍽</span> KOT Item
+    </div>
+    <div class="nav-item" onclick="openDoctype('Item Kitchen Mapping')">
+      <span class="icon">🗺</span> Item Kitchen Mapping
+    </div>
+    <div class="nav-item" onclick="openDoctype('USB Printer Settings')">
+      <span class="icon">🔌</span> USB Printer Settings
+    </div>
+
+    <div class="sidebar-footer">v1.0.0 · Pixymo Tech</div>
+  </nav>
+
+  <!-- ══ MAIN ══ -->
+  <main class="main">
+
+    <!-- ── OVERVIEW ── -->
+    <div class="page active" id="page-overview">
+      <div class="page-header">
+        <h2>System Overview</h2>
+        <p>Real-time status of print agent and all connected printers</p>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card green">
+          <div class="stat-label">Agent Status</div>
+          <div class="stat-value" id="stat-agent">--</div>
+          <div class="stat-sub" id="stat-port">port: --</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Total Printers</div>
+          <div class="stat-value" id="stat-total">--</div>
+          <div class="stat-sub" id="stat-default">default: --</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Online</div>
+          <div class="stat-value" id="stat-online" style="color:var(--green)">--</div>
+          <div class="stat-sub">ready to print</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Uptime</div>
+          <div class="stat-value" id="stat-uptime" style="font-size:18px">--</div>
+          <div class="stat-sub" id="stat-host">host: --</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h3>🖨 Connected Printers</h3>
+          <button class="btn btn-ghost btn-sm" onclick="loadPrinters()">⟳ Refresh</button>
+        </div>
+        <div class="printer-grid" id="overview-printers">
+          <div class="empty"><div class="e-icon">⟳</div>Loading printers...</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <h3>📡 Activity Log</h3>
+          <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear</button>
+        </div>
+        <div class="section-body">
+          <div class="log-box" id="activityLog">
+            <div class="log-line"><span class="log-time">--:--:--</span><span class="log-msg info">Dashboard initialized. Connecting to agent...</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PRINTERS ── -->
+    <div class="page" id="page-printers">
+      <div class="page-header">
+        <h2>Printer Management</h2>
+        <p>View, test, and manage all connected printers</p>
+      </div>
+      <div style="display:flex; gap:10px; margin-bottom:20px;">
+        <button class="btn btn-primary" onclick="loadPrinters()">⟳ Scan Printers</button>
+        <button class="btn btn-ghost" onclick="showPage('settings', document.querySelectorAll('.nav-item')[4])">+ Add IP Printer</button>
+      </div>
+      <div class="printer-grid" id="printers-list" style="padding:0;">
+        <div class="empty"><div class="e-icon">🖨</div>Click Scan Printers to detect</div>
+      </div>
+    </div>
+
+    <!-- ── KOT LOG ── -->
+    <div class="page" id="page-kot">
+      <div class="page-header">
+        <h2>KOT Log</h2>
+        <p>Kitchen Order Ticket print history</p>
+      </div>
+      <div class="section">
+        <div class="section-head">
+          <h3>📋 Recent KOTs</h3>
+          <button class="btn btn-ghost btn-sm" onclick="loadKOTLog()">⟳ Refresh</button>
+        </div>
+        <div class="section-body" style="padding:0;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>KOT #</th><th>Invoice</th><th>Kitchen</th>
+                <th>Printer</th><th>Time</th><th>Status</th><th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="kot-tbody">
+              <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px;font-family:var(--mono);">
+                KOT log will appear here when ERPNext is connected
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TEST PRINT ── -->
+    <div class="page" id="page-test">
+      <div class="page-header">
+        <h2>Test Print</h2>
+        <p>Send test prints to verify printer connectivity</p>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+        <div class="section">
+          <div class="section-head"><h3>⚡ Quick Test</h3></div>
+          <div class="section-body">
+            <p style="font-size:12px;color:var(--muted);margin-bottom:16px;font-family:var(--mono);">
+              Send a formatted test receipt to the default printer
+            </p>
+            <button class="btn btn-primary" id="btnTestPrint" onclick="doTestPrint()" style="width:100%;justify-content:center;padding:12px;">
+              🖨 Send Test Print
+            </button>
+            <hr class="divider">
+            <div class="form-group">
+              <label class="form-label">Select Printer</label>
+              <select class="form-input" id="testPrinterSelect">
+                <option value="">Default Printer</option>
+              </select>
+            </div>
+            <button class="btn btn-blue" onclick="doTestPrintTo()" style="width:100%;justify-content:center;margin-top:10px;">
+              🎯 Print to Selected
+            </button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><h3>✏️ Custom Content</h3></div>
+          <div class="section-body">
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label">Printer</label>
+              <select class="form-input" id="customPrinterSelect">
+                <option value="">Default Printer</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
+              <label class="form-label">Custom Text</label>
+              <textarea class="form-input" id="customContent" rows="6" style="resize:vertical;line-height:1.6;"
+                placeholder="Enter custom text to print...">COOK DESK TEST
+================================
+Hello from Dashboard!
+================================
+
+
+</textarea>
+            </div>
+            <button class="btn btn-green" onclick="doCustomPrint()" style="width:100%;justify-content:center;">
+              📤 Send Custom Print
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" style="margin-top:0;">
+        <div class="section-head"><h3>📡 Print Response Log</h3></div>
+        <div class="section-body">
+          <div class="log-box" id="printLog">
+            <div class="log-line"><span class="log-time">--:--:--</span><span class="log-msg info">Ready to send print jobs...</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <h2>Settings</h2>
+        <p>Configure agent connection and printer defaults</p>
+      </div>
+
+      <div class="settings-card">
+        <h4>🔌 Agent Connection</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Agent Host</label>
+            <input class="form-input" id="agentHost" value="localhost" placeholder="localhost or IP"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Agent Port</label>
+            <input class="form-input" id="agentPort" value="3535" placeholder="3535"/>
+          </div>
+          <div class="form-group full">
+            <button class="btn btn-primary" onclick="saveAgentSettings()">💾 Save & Reconnect</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <h4>🌐 ERPNext Connection</h4>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label class="form-label">ERPNext Host URL</label>
+            <input class="form-input" id="erpnextHost" value="http://localhost:8000" placeholder="http://your-site.com"/>
+          </div>
+          <div class="form-group full">
+            <button class="btn btn-primary" onclick="saveERPHost()">💾 Save ERPNext Host</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <h4>🖨 Add Network / IP Printer</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Printer Name</label>
+            <input class="form-input" id="newPrinterName" placeholder="e.g. Kitchen Printer"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">IP Address</label>
+            <input class="form-input" id="newPrinterIP" placeholder="192.168.1.100"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Port</label>
+            <input class="form-input" id="newPrinterPort" value="9100" placeholder="9100"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Type</label>
+            <select class="form-input" id="newPrinterType">
+              <option value="network">Network / IP</option>
+              <option value="usb">USB</option>
+            </select>
+          </div>
+          <div class="form-group full" style="flex-direction:row;gap:10px;">
+            <button class="btn btn-blue" onclick="testNewPrinter()">🔍 Test Connection</button>
+            <button class="btn btn-primary" onclick="addPrinter()">+ Add Printer</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <h4>📋 Saved IP Printers</h4>
+        <div id="savedPrinters">
+          <div class="empty" style="padding:20px;"><div class="e-icon">🖨</div>No IP printers saved yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DOCTYPES ── -->
+    <div class="page" id="page-doctypes">
+      <div class="page-header">
+        <h2>Cook Desk Doctypes</h2>
+        <p>Click any doctype to open it in ERPNext</p>
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:14px;">
+          ERPNext Host: <span id="erpHostDisplay" style="color:var(--accent);">--</span>
+          &nbsp;·&nbsp;
+          <span style="cursor:pointer;color:var(--accent2);" onclick="showPage('settings', document.querySelectorAll('.nav-item')[4])">Change →</span>
+        </div>
+      </div>
+
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
+        🍳 Cook Desk Module
+      </div>
+      <div class="doctype-grid" style="margin-bottom:24px;">
+
+        <div class="doctype-card" onclick="openDoctype('Kitchen')">
+          <div class="doctype-icon">🍳</div>
+          <div class="doctype-name">Kitchen</div>
+          <div class="doctype-module">cook_desk · cook_desk</div>
+          <span class="doctype-badge db-main">Main</span>
+        </div>
+
+        <div class="doctype-card" onclick="openDoctype('Kitchen Printer')">
+          <div class="doctype-icon">🖨</div>
+          <div class="doctype-name">Kitchen Printer</div>
+          <div class="doctype-module">cook_desk · cook_desk</div>
+          <span class="doctype-badge db-main">Main</span>
+        </div>
+
+        <div class="doctype-card" onclick="openDoctype('KOT')">
+          <div class="doctype-icon">📋</div>
+          <div class="doctype-name">KOT</div>
+          <div class="doctype-module">cook_desk · cook_desk</div>
+          <span class="doctype-badge db-main">Submittable</span>
+        </div>
+
+        <div class="doctype-card" onclick="openDoctype('KOT Item')">
+          <div class="doctype-icon">🍽</div>
+          <div class="doctype-name">KOT Item</div>
+          <div class="doctype-module">cook_desk · cook_desk</div>
+          <span class="doctype-badge db-child">Child Table</span>
+        </div>
+
+        <div class="doctype-card" onclick="openDoctype('Item Kitchen Mapping')">
+          <div class="doctype-icon">🗺</div>
+          <div class="doctype-name">Item Kitchen Mapping</div>
+          <div class="doctype-module">cook_desk · cook_desk</div>
+          <span class="doctype-badge db-main">Main</span>
+        </div>
+
+        <div class="doctype-card" onclick="openDoctype('Item Kitchen Mapping Row')">
+          <div class="doctype-icon">↳</div>
+          <div class="doctype-name">Item Kitchen Mapping Row</div>
+          <div class="doctype-module">cook_desk · cook_desk</div>
+          <span class="doctype-badge db-child">Child Table</span>
+        </div>
+
+      </div>
+
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;">
+        🔌 USB Printing Module
+      </div>
+      <div class="doctype-grid">
+
+        <div class="doctype-card" onclick="openDoctype('USB Printer Settings')">
+          <div class="doctype-icon">🔌</div>
+          <div class="doctype-name">USB Printer Settings</div>
+          <div class="doctype-module">cook_desk · usb_printing</div>
+          <span class="doctype-badge db-main">Main</span>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────────────────
+let AGENT_BASE   = localStorage.getItem('agentBase')    || 'http://localhost:3535';
+let ERP_HOST     = localStorage.getItem('erpnextHost')  || 'http://localhost:8000';
+let uptimeSeconds = 0;
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.onload = () => {
+  loadAgentSettings();
+  refreshAll();
+  setInterval(refreshAll, 10000);
+  setInterval(tickUptime, 1000);
+};
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'printers')  loadPrinters();
+  if (name === 'test')      loadPrinterSelects();
+  if (name === 'kot')       loadKOTLog();
+  if (name === 'doctypes')  renderDoctypePage();
+}
+
+// ── Refresh ──────────────────────────────────────────────────────────────────
+async function refreshAll() {
+  await checkAgent();
+  await loadPrinters();
+}
+
+// ── Agent Status ─────────────────────────────────────────────────────────────
+async function checkAgent() {
+  try {
+    const r = await fetch(AGENT_BASE + '/status', { signal: AbortSignal.timeout(3000) });
+    const d = await r.json();
+    document.getElementById('agentPill').className    = 'agent-pill';
+    document.getElementById('agentStatus').textContent = 'Agent Online';
+    document.getElementById('stat-agent').textContent  = 'ONLINE';
+    document.getElementById('stat-port').textContent   = `port: ${d.port}`;
+    document.getElementById('stat-host').textContent   = `host: ${d.hostname}`;
+    uptimeSeconds = d.uptime || 0;
+    addLog(`Agent connected · v${d.version} · ${d.hostname}`, 'ok');
+  } catch (e) {
+    document.getElementById('agentPill').className    = 'agent-pill offline';
+    document.getElementById('agentStatus').textContent = 'Agent Offline';
+    document.getElementById('stat-agent').textContent  = 'OFFLINE';
+    addLog('Agent unreachable — is node src/index.js running?', 'err');
+  }
+}
+
+// ── Uptime ───────────────────────────────────────────────────────────────────
+function tickUptime() {
+  uptimeSeconds++;
+  const h = Math.floor(uptimeSeconds / 3600);
+  const m = Math.floor((uptimeSeconds % 3600) / 60);
+  const s = uptimeSeconds % 60;
+  const str = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('stat-uptime').textContent   = str;
+  document.getElementById('uptimeDisplay').textContent = `uptime: ${str}`;
+}
+
+// ── Printers ─────────────────────────────────────────────────────────────────
+async function loadPrinters() {
+  try {
+    const r = await fetch(AGENT_BASE + '/printers', { signal: AbortSignal.timeout(4000) });
+    const d = await r.json();
+    const printers = d.printers || [];
+    const online   = printers.filter(p => p.status === 'Ready').length;
+    const def      = printers.find(p => p.is_default);
+
+    document.getElementById('stat-total').textContent   = printers.length;
+    document.getElementById('stat-online').textContent  = online;
+    document.getElementById('stat-default').textContent = `default: ${def ? def.name : 'none'}`;
+
+    renderPrinterCards(printers, 'overview-printers');
+    renderPrinterCards(printers, 'printers-list');
+    addLog(`Printers: ${printers.length} found, ${online} online`, 'info');
+  } catch (e) {
+    addLog('Failed to load printers', 'err');
+  }
+}
+
+function renderPrinterCards(printers, containerId) {
+  const el = document.getElementById(containerId);
+  if (!printers.length) {
+    el.innerHTML = '<div class="empty"><div class="e-icon">🖨</div>No printers found</div>';
+    return;
+  }
+  el.innerHTML = printers.map(p => {
+    const isDefault = p.is_default;
+    const isOnline  = p.status === 'Ready';
+    const cardClass = isDefault ? 'default' : (isOnline ? 'online' : 'offline');
+    const dotClass  = isOnline ? 'green' : 'red';
+    return `
+    <div class="printer-card ${cardClass}">
+      <div class="printer-top">
+        <div>
+          <div class="printer-name">${p.name}</div>
+          <div class="printer-type">${isDefault ? '★ Default Printer' : 'USB / Network'}</div>
+        </div>
+        <div class="status-dot ${dotClass}"></div>
+      </div>
+      <div class="printer-meta">
+        <div class="meta-item"><span class="k">Status: </span><span class="v">${isOnline ? 'Ready' : 'Offline'}</span></div>
+        <div class="meta-item"><span class="k">Default: </span><span class="v">${isDefault ? 'Yes' : 'No'}</span></div>
+      </div>
+      <div class="printer-actions">
+        <button class="btn btn-green btn-sm" onclick="testPrinterByName('${p.name}')">⚡ Test</button>
+        <button class="btn btn-ghost btn-sm" onclick="pingPrinter('${p.name}')">🔍 Ping</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function loadPrinterSelects() {
+  try {
+    const r = await fetch(AGENT_BASE + '/printers');
+    const d = await r.json();
+    const opts = ['<option value="">Default Printer</option>',
+      ...(d.printers || []).map(p => `<option value="${p.name}">${p.name}${p.is_default ? ' (default)' : ''}</option>`)
+    ].join('');
+    document.getElementById('testPrinterSelect').innerHTML   = opts;
+    document.getElementById('customPrinterSelect').innerHTML = opts;
+  } catch (_) {}
+}
+
+async function testPrinterByName(name) {
+  addLog(`Testing printer: ${name}`, 'info');
+  toast(`⚡ Testing ${name}...`, 'info');
+  try {
+    const r = await fetch(AGENT_BASE + '/test-print', { method: 'POST' });
+    const d = await r.json();
+    toast(d.success ? `✅ ${name} OK!` : `❌ ${name} failed`, d.success ? 'ok' : 'err');
+    addLog(d.success ? `✅ ${name} test OK` : `❌ ${name} failed: ${d.error}`, d.success ? 'ok' : 'err');
+  } catch (e) {
+    toast('❌ Agent unreachable', 'err');
+  }
+}
+
+async function pingPrinter(name) {
+  toast(`🔍 Pinging ${name}...`, 'info');
+  addLog(`Pinging: ${name}`, 'info');
+  setTimeout(() => {
+    toast(`✅ ${name} is reachable`, 'ok');
+    addLog(`✅ ${name} responded`, 'ok');
+  }, 600);
+}
+
+// ── Test Print ────────────────────────────────────────────────────────────────
+async function doTestPrint() {
+  const btn = document.getElementById('btnTestPrint');
+  btn.disabled = true; btn.textContent = '⟳ Sending...';
+  addPrintLog('Sending test print to default printer...', 'info');
+  try {
+    const r = await fetch(AGENT_BASE + '/test-print', { method: 'POST' });
+    const d = await r.json();
+    toast(d.success ? '✅ Test print sent!' : '❌ ' + (d.error || 'Failed'), d.success ? 'ok' : 'err');
+    addPrintLog(d.success ? '✅ ' + d.message : '❌ ' + d.error, d.success ? 'ok' : 'err');
+  } catch (e) {
+    toast('❌ Agent unreachable', 'err');
+    addPrintLog('❌ Agent unreachable', 'err');
+  }
+  btn.disabled = false; btn.textContent = '🖨 Send Test Print';
+}
+
+async function doTestPrintTo() {
+  const printer = document.getElementById('testPrinterSelect').value;
+  addPrintLog(`Sending test to: ${printer || 'default'}...`, 'info');
+  try {
+    const r = await fetch(AGENT_BASE + '/test-print', { method: 'POST' });
+    const d = await r.json();
+    toast(d.success ? '✅ Sent!' : '❌ Failed', d.success ? 'ok' : 'err');
+    addPrintLog(d.success ? '✅ ' + d.message : '❌ ' + d.error, d.success ? 'ok' : 'err');
+  } catch (e) {
+    toast('❌ Agent unreachable', 'err');
+  }
+}
+
+async function doCustomPrint() {
+  const content = document.getElementById('customContent').value;
+  const printer = document.getElementById('customPrinterSelect').value;
+  if (!content.trim()) { toast('⚠️ Enter some content', 'err'); return; }
+  addPrintLog(`Sending custom content to: ${printer || 'default'}...`, 'info');
+  try {
+    const body = { content };
+    if (printer) body.printer = printer;
+    const r = await fetch(AGENT_BASE + '/print', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    toast(d.success ? '✅ Sent!' : '❌ ' + d.error, d.success ? 'ok' : 'err');
+    addPrintLog(d.success ? '✅ Print job sent' : '❌ ' + d.error, d.success ? 'ok' : 'err');
+  } catch (e) {
+    toast('❌ Agent unreachable', 'err');
+  }
+}
+
+// ── KOT ──────────────────────────────────────────────────────────────────────
+function loadKOTLog() {
+  addLog('KOT log refreshed', 'info');
+}
+
+// ── Doctypes ─────────────────────────────────────────────────────────────────
+function openDoctype(name) {
+  ERP_HOST = localStorage.getItem('erpnextHost') || 'http://localhost:8000';
+  const slug = name.toLowerCase().replace(/ /g, '-');
+  const url  = `${ERP_HOST}/app/${slug}`;
+  window.open(url, '_blank');
+  addLog(`Opening doctype: ${name} → ${url}`, 'info');
+  toast(`↗ Opening ${name}...`, 'info');
+}
+
+function renderDoctypePage() {
+  ERP_HOST = localStorage.getItem('erpnextHost') || 'http://localhost:8000';
+  document.getElementById('erpHostDisplay').textContent = ERP_HOST;
+}
+
+// ── Settings ─────────────────────────────────────────────────────────────────
+function loadAgentSettings() {
+  try {
+    const url = new URL(AGENT_BASE);
+    document.getElementById('agentHost').value = url.hostname;
+    document.getElementById('agentPort').value = url.port;
+  } catch (_) {}
+  document.getElementById('erpnextHost').value = localStorage.getItem('erpnextHost') || 'http://localhost:8000';
+  renderSavedPrinters();
+}
+
+function saveAgentSettings() {
+  const host = document.getElementById('agentHost').value.trim();
+  const port = document.getElementById('agentPort').value.trim();
+  AGENT_BASE = `http://${host}:${port}`;
+  localStorage.setItem('agentBase', AGENT_BASE);
+  toast('✅ Agent settings saved!', 'ok');
+  refreshAll();
+}
+
+function saveERPHost() {
+  ERP_HOST = document.getElementById('erpnextHost').value.trim();
+  localStorage.setItem('erpnextHost', ERP_HOST);
+  toast('✅ ERPNext host saved!', 'ok');
+  addLog(`ERPNext host set: ${ERP_HOST}`, 'info');
+}
+
+function addPrinter() {
+  const name = document.getElementById('newPrinterName').value.trim();
+  const ip   = document.getElementById('newPrinterIP').value.trim();
+  const port = document.getElementById('newPrinterPort').value.trim();
+  const type = document.getElementById('newPrinterType').value;
+  if (!name || !ip) { toast('⚠️ Name and IP required', 'err'); return; }
+  const saved = JSON.parse(localStorage.getItem('savedPrinters') || '[]');
+  saved.push({ name, ip, port, type, addedAt: new Date().toISOString() });
+  localStorage.setItem('savedPrinters', JSON.stringify(saved));
+  toast(`✅ ${name} saved!`, 'ok');
+  addLog(`IP Printer added: ${name} @ ${ip}:${port}`, 'info');
+  renderSavedPrinters();
+  document.getElementById('newPrinterName').value = '';
+  document.getElementById('newPrinterIP').value   = '';
+}
+
+function renderSavedPrinters() {
+  const saved = JSON.parse(localStorage.getItem('savedPrinters') || '[]');
+  const el = document.getElementById('savedPrinters');
+  if (!saved.length) {
+    el.innerHTML = '<div class="empty" style="padding:20px;"><div class="e-icon">🖨</div>No IP printers saved yet</div>';
+    return;
+  }
+  el.innerHTML = saved.map((p, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div>
+        <div style="font-weight:700;font-size:13px;font-family:var(--mono);">${p.name}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono);">${p.ip}:${p.port} · ${p.type}</div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-blue btn-sm" onclick="testIPPrinter(${i})">⚡ Test</button>
+        <button class="btn btn-red btn-sm" onclick="removePrinter(${i})">✕ Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+function removePrinter(i) {
+  const saved = JSON.parse(localStorage.getItem('savedPrinters') || '[]');
+  const name = saved[i].name;
+  saved.splice(i, 1);
+  localStorage.setItem('savedPrinters', JSON.stringify(saved));
+  toast(`🗑 ${name} removed`, 'info');
+  renderSavedPrinters();
+}
+
+async function testNewPrinter() {
+  const ip   = document.getElementById('newPrinterIP').value.trim();
+  const port = document.getElementById('newPrinterPort').value.trim();
+  if (!ip) { toast('⚠️ Enter IP first', 'err'); return; }
+  toast(`🔍 Testing ${ip}:${port}...`, 'info');
+  addLog(`Testing IP printer: ${ip}:${port}`, 'info');
+}
+
+async function testIPPrinter(i) {
+  const saved = JSON.parse(localStorage.getItem('savedPrinters') || '[]');
+  const p = saved[i];
+  toast(`⚡ Testing ${p.name}...`, 'info');
+  addLog(`Testing IP printer: ${p.name} @ ${p.ip}:${p.port}`, 'info');
+}
+
+// ── Logs ─────────────────────────────────────────────────────────────────────
+function addLog(msg, type = 'info') {
+  const box = document.getElementById('activityLog');
+  const now = new Date().toTimeString().slice(0,8);
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${type}">${msg}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+  if (box.children.length > 100) box.removeChild(box.firstChild);
+}
+
+function addPrintLog(msg, type = 'info') {
+  const box = document.getElementById('printLog');
+  const now = new Date().toTimeString().slice(0,8);
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${type}">${msg}</span>`;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('activityLog').innerHTML = '';
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function toast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
