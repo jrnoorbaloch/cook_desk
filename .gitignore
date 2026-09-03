@@ -1,0 +1,21 @@
+# Node
+node_agent/node_modules/
+node_agent/dist/
+node_agent/.cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# ERPNext
+.env
+*.DS_Store
+
+# Logs
+*.log
+
+# Generated bundles
+*.rar
+node_agent/USB Print Agent Setup *.exe
